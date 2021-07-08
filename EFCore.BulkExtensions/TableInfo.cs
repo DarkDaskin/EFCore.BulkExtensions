@@ -1,5 +1,4 @@
 using EFCore.BulkExtensions.SqlAdapters;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -69,9 +68,9 @@ namespace EFCore.BulkExtensions
         protected IList<object> EntitiesSortedReference { get; set; } // Operation Merge writes In Output table first Existing that were Updated then for new that were Inserted so this makes sure order is same in list when need to set Output
 
         public StoreObjectIdentifier ObjectIdentifier { get; set; }
-
-        public SqliteConnection SqliteConnection { get; set; }
-        public SqliteTransaction SqliteTransaction { get; set; }
+        
+        // Non-generic to return nulls on missing keys.
+        public IDictionary ProviderData { get; } = new Dictionary<object, object>();
 
         public static TableInfo CreateInstance<T>(DbContext context, Type type, IList<T> entities, OperationType operationType, BulkConfig bulkConfig)
         {

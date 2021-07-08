@@ -27,7 +27,7 @@ namespace EFCore.BulkExtensions.Sqlite
             
         public async Task InsertAsync<T>(DbContext context, Type type, IList<T> entities, TableInfo tableInfo, Action<decimal> progress, CancellationToken cancellationToken, bool isAsync)
         {
-            SqliteConnection connection = tableInfo.SqliteConnection;
+            var connection = (SqliteConnection)tableInfo.ProviderData[typeof(SqliteConnection)];
             if (connection == null)
             {
                 connection = isAsync ? await OpenAndGetSqliteConnectionAsync(context, tableInfo.BulkConfig, cancellationToken).ConfigureAwait(false)
@@ -43,7 +43,7 @@ namespace EFCore.BulkExtensions.Sqlite
                     doExplicitCommit = true;
                 }
 
-                SqliteTransaction transaction = tableInfo.SqliteTransaction;
+                var transaction = (SqliteTransaction)tableInfo.ProviderData[typeof(SqliteTransaction)];
                 if (transaction == null)
                 {
                     var dbTransaction = doExplicitCommit ? connection.BeginTransaction()
@@ -215,8 +215,8 @@ namespace EFCore.BulkExtensions.Sqlite
 
                 tableInfo.BulkConfig.OperationType = OperationType.Insert;
                 tableInfo.InsertToTempTable = true;
-                tableInfo.SqliteConnection = connection;
-                tableInfo.SqliteTransaction = transaction;
+                tableInfo.ProviderData[typeof(SqliteConnection)] = connection;
+                tableInfo.ProviderData[typeof(SqliteTransaction)] = transaction;
                 // INSERT
                 if (isAsync)
                 {
