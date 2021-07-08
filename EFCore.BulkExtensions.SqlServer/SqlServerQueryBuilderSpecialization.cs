@@ -1,13 +1,13 @@
-﻿using EFCore.BulkExtensions.SqlAdapters;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using EFCore.BulkExtensions.SqlAdapters;
+using Microsoft.EntityFrameworkCore;
 
-namespace EFCore.BulkExtensions.SQLAdapters.SQLServer
+namespace EFCore.BulkExtensions.SqlServer
 {
-    public class SqlServerDialect : IQueryBuilderSpecialization
+    public class SqlServerQueryBuilderSpecialization : IQueryBuilderSpecialization
     {
         private static readonly int SelectStatementLength = "SELECT".Length;
 

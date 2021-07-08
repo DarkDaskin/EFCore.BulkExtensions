@@ -33,7 +33,7 @@ namespace EFCore.BulkExtensions.Tests
             var connectionString = ContextUtil.GetSqlServerConnectionString(databaseName);
             var connection = new SqlConnection(connectionString) as DbConnection;
             connection = new MyConnection(connection);
-            builder.UseSqlServer(connection, opt => opt.UseNetTopologySuite());
+            builder.UseSqlServer(connection, opt => opt.UseNetTopologySuite().UseBulkExtensions());
             return builder.Options;
         }
 

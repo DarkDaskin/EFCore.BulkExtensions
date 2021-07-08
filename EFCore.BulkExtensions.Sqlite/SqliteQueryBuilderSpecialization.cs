@@ -1,15 +1,15 @@
-﻿using EFCore.BulkExtensions.SqlAdapters;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using EFCore.BulkExtensions.SqlAdapters;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
-namespace EFCore.BulkExtensions.SQLAdapters.SQLite
+namespace EFCore.BulkExtensions.Sqlite
 {
-    public class SqLiteDialect : IQueryBuilderSpecialization
+    public class SqliteQueryBuilderSpecialization : IQueryBuilderSpecialization
     {
         public List<object> ReloadSqlParameters(DbContext context, List<object> sqlParameters)
         {

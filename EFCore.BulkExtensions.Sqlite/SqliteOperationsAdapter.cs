@@ -1,17 +1,17 @@
-﻿using EFCore.BulkExtensions.SqlAdapters;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using EFCore.BulkExtensions.SqlAdapters;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
-namespace EFCore.BulkExtensions.SQLAdapters.SQLite
+namespace EFCore.BulkExtensions.Sqlite
 {
-    public class SqLiteOperationsAdapter: ISqlOperationsAdapter
+    public class SqliteOperationsAdapter: ISqlOperationsAdapter
     {
         #region Methods
         // Insert

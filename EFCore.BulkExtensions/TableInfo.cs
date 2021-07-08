@@ -70,8 +70,8 @@ namespace EFCore.BulkExtensions
 
         public StoreObjectIdentifier ObjectIdentifier { get; set; }
 
-        internal SqliteConnection SqliteConnection { get; set; }
-        internal SqliteTransaction SqliteTransaction { get; set; }
+        public SqliteConnection SqliteConnection { get; set; }
+        public SqliteTransaction SqliteTransaction { get; set; }
 
         public static TableInfo CreateInstance<T>(DbContext context, Type type, IList<T> entities, OperationType operationType, BulkConfig bulkConfig)
         {
@@ -629,7 +629,7 @@ namespace EFCore.BulkExtensions
             return previousPropertyColumnNamesDict;
         }
 
-        internal void UpdateReadEntities<T>(Type type, IList<T> entities, IList<T> existingEntities)
+        public void UpdateReadEntities<T>(Type type, IList<T> entities, IList<T> existingEntities)
         {
             List<string> propertyNames = PropertyColumnNamesDict.Keys.ToList();
             if (HasOwnedTypes)

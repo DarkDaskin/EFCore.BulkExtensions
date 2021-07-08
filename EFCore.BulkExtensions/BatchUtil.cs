@@ -312,7 +312,7 @@ namespace EFCore.BulkExtensions
                 {
                     case ExpressionType.Add:
                         CreateUpdateBody(createBodyData, binaryExpression.Left, columnName);
-                        var sqlOperator = SqlAdaptersMapping.GetAdapterDialect(createBodyData.DatabaseType)
+                        var sqlOperator = SqlAdaptersMapping.GetAdapterDialect(createBodyData.DbContext)
                             .GetBinaryExpressionAddOperation(binaryExpression);
                         sqlColumns.Append(" " + sqlOperator);
                         CreateUpdateBody(createBodyData, binaryExpression.Right, columnName);

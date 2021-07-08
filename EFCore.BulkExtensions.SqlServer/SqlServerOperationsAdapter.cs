@@ -1,10 +1,4 @@
-﻿using EFCore.BulkExtensions.SqlAdapters;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using NetTopologySuite.Geometries;
-using NetTopologySuite.IO;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -13,10 +7,16 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using EFCore.BulkExtensions.SqlAdapters;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 
-namespace EFCore.BulkExtensions.SQLAdapters.SQLServer
+namespace EFCore.BulkExtensions.SqlServer
 {
-    public class SqlOperationsServerAdapter: ISqlOperationsAdapter
+    public class SqlServerOperationsAdapter: ISqlOperationsAdapter
     {
         #region Methods
         // Insert

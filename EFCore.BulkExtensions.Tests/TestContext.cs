@@ -139,12 +139,12 @@ namespace EFCore.BulkExtensions.Tests
                 //var connectionString = $@"Data Source=(localdb)\MSSQLLocalDB;Database={databaseName};Trusted_Connection=True;MultipleActiveResultSets=True";
 
                 //optionsBuilder.UseSqlServer(connectionString); // Can NOT Test with UseInMemoryDb (Exception: Relational-specific methods can only be used when the context is using a relational)
-                optionsBuilder.UseSqlServer(connectionString, opt => opt.UseNetTopologySuite()); // NetTopologySuite for Geometry / Geometry types
+                optionsBuilder.UseSqlServer(connectionString, opt => opt.UseNetTopologySuite().UseBulkExtensions()); // NetTopologySuite for Geometry / Geometry types
             }
             else if (DbServer == DbServer.Sqlite)
             {
                 string connectionString = GetSqliteConnectionString(databaseName);
-                optionsBuilder.UseSqlite(connectionString);
+                optionsBuilder.UseSqlite(connectionString, opt => opt.UseBulkExtensions());
                 SQLitePCL.Batteries.Init();
 
                 // ALTERNATIVELY:

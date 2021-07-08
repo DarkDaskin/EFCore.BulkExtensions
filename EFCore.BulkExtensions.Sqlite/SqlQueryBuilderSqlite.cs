@@ -1,9 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Data.SqlClient;
 
-namespace EFCore.BulkExtensions
+namespace EFCore.BulkExtensions.Sqlite
 {
     public static class SqlQueryBuilderSqlite
     {
