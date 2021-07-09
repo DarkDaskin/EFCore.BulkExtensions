@@ -48,9 +48,7 @@ namespace EFCore.BulkExtensions.SqlServer
             {
                 var transaction = context.Database.CurrentTransaction;
 
-                using var sqlBulkCopy = GetSqlBulkCopy((SqlConnection)connection, transaction, tableInfo.BulkConfig);
-                bool setColumnMapping = false;
-                tableInfo.SetSqlBulkCopyConfig(sqlBulkCopy, entities, setColumnMapping, progress);
+                using var sqlBulkCopy = GetSqlBulkCopy((SqlConnection)connection, transaction, tableInfo, entities.Count, progress);
                 try
                 {
                     var dataTable = GetDataTable(context, type, entities, sqlBulkCopy, tableInfo);
@@ -193,8 +191,8 @@ namespace EFCore.BulkExtensions.SqlServer
                     context.Database.ExecuteSqlRaw(sqlAlterTableColumnsToNullable);
                 }
             }
-
-            bool keepIdentity = tableInfo.BulkConfig.SqlBulkCopyOptions.HasFlag(SqlBulkCopyOptions.KeepIdentity);
+            
+            bool keepIdentity = tableInfo.BulkConfig.KeepIdentity;
             try
             {
                 if (isAsync)
@@ -387,10 +385,28 @@ namespace EFCore.BulkExtensions.SqlServer
         #endregion
 
         #region Connection
-        private static SqlBulkCopy GetSqlBulkCopy(SqlConnection sqlConnection, IDbContextTransaction transaction, BulkConfig config)
+        private static SqlBulkCopy GetSqlBulkCopy(SqlConnection sqlConnection, IDbContextTransaction transaction, TableInfo tableInfo, int totalCount, Action<decimal> progress)
         {
-            var sqlTransaction = transaction == null ? null : (SqlTransaction)transaction.GetUnderlyingTransaction(config);
-            var sqlBulkCopy = new SqlBulkCopy(sqlConnection, config.SqlBulkCopyOptions, sqlTransaction);
+            var sqlTransaction = (SqlTransaction)transaction?.GetUnderlyingTransaction(tableInfo.BulkConfig);
+            var sqlBulkCopyOptions = tableInfo.BulkConfig.GetSqlServerOptions().SqlBulkCopyOptions;
+            if (tableInfo.BulkConfig.KeepIdentity)
+                sqlBulkCopyOptions |= SqlBulkCopyOptions.KeepIdentity;
+
+            var sqlBulkCopy = new SqlBulkCopy(sqlConnection, sqlBulkCopyOptions, sqlTransaction)
+            {
+                DestinationTableName = tableInfo.InsertToTempTable ? tableInfo.FullTempTableName : tableInfo.FullTableName,
+                BatchSize = tableInfo.BulkConfig.BatchSize,
+                NotifyAfter = tableInfo.BulkConfig.NotifyAfter ?? tableInfo.BulkConfig.BatchSize,
+                EnableStreaming = tableInfo.BulkConfig.EnableStreaming
+            };
+
+            sqlBulkCopy.BulkCopyTimeout = tableInfo.BulkConfig.BulkCopyTimeout ?? sqlBulkCopy.BulkCopyTimeout;
+
+            sqlBulkCopy.SqlRowsCopied += (sender, e) =>
+            {
+                progress?.Invoke(ProgressHelper.GetProgress(totalCount, e.RowsCopied)); // round to 4 decimal places
+            };
+
             return sqlBulkCopy;
         }
         #endregion

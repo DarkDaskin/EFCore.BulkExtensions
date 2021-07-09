@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Query.Internal;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -92,10 +93,10 @@ namespace EFCore.BulkExtensions
         // UPDATE [a] SET [UpdateColumns] = N'updateValues'
         // FROM [Table] AS [a]
         // WHERE [a].[Columns] = FilterValues
-        public static (string, List<object>) GetSqlUpdate(IQueryable query, DbContext context, object updateValues, List<string> updateColumns)
+        public static (string, List<IDbDataParameter>) GetSqlUpdate(IQueryable query, DbContext context, object updateValues, List<string> updateColumns)
         {
             var (sql, tableAlias, tableAliasSufixAs, topStatement, leadingComments, innerParameters) = GetBatchSql(query, context, isUpdate: true);
-            var sqlParameters = new List<object>(innerParameters);
+            var sqlParameters = innerParameters.ToList();
 
             string sqlSET = GetSqlSetSegment(context, updateValues.GetType(), updateValues, updateColumns, sqlParameters);
 
@@ -112,9 +113,9 @@ namespace EFCore.BulkExtensions
         /// <param name="query"></param>
         /// <param name="expression"></param>
         /// <returns></returns>
-        public static (string, List<object>) GetSqlUpdate<T>(IQueryable<T> query, DbContext context, Type type, Expression<Func<T, T>> expression) where T : class
+        public static (string, List<IDbDataParameter>) GetSqlUpdate<T>(IQueryable<T> query, DbContext context, Type type, Expression<Func<T, T>> expression) where T : class
         {
-            (string sql, string tableAlias, string tableAliasSufixAs, string topStatement, string leadingComments, IEnumerable<object> innerParameters) = GetBatchSql(query, context, isUpdate: true);
+            (string sql, string tableAlias, string tableAliasSufixAs, string topStatement, string leadingComments, IEnumerable<IDbDataParameter> innerParameters) = GetBatchSql(query, context, isUpdate: true);
 
             var createUpdateBodyData = new BatchUpdateCreateBodyData(sql, context, innerParameters, query, type, tableAlias, expression);
 
@@ -129,12 +130,14 @@ namespace EFCore.BulkExtensions
             return (resultQuery, sqlParameters);
         }
 
-        public static List<object> ReloadSqlParameters(DbContext context, List<object> sqlParameters)
+        [Obsolete("Should be no-op now")]
+        public static List<IDbDataParameter> ReloadSqlParameters(DbContext context, List<IDbDataParameter> sqlParameters)
         {
-            return SqlAdaptersMapping.GetAdapterDialect(context).ReloadSqlParameters(context,sqlParameters);
+            return sqlParameters;
+            //return SqlAdaptersMapping.GetAdapterDialect(context).ReloadSqlParameters(context,sqlParameters);
         }
 
-        public static (string, string, string, string, string, IEnumerable<object>) GetBatchSql(IQueryable query, DbContext context, bool isUpdate)
+        public static (string, string, string, string, string, IEnumerable<IDbDataParameter>) GetBatchSql(IQueryable query, DbContext context, bool isUpdate)
         {
             var sqlQueryBuilder = SqlAdaptersMapping.GetAdapterDialect(context);
             var (fullSqlQuery, innerParameters) = query.ToParametrizedSql();
@@ -165,15 +168,16 @@ namespace EFCore.BulkExtensions
             return (sql, tableAlias, tableAliasSufixAs, topStatement, leadingComments, innerParameters);
         }
 
-        public static string GetSqlSetSegment(DbContext context, Type updateValuesType, object updateValues, List<string> updateColumns, List<object> parameters)
+        public static string GetSqlSetSegment(DbContext context, Type updateValuesType, object updateValues, List<string> updateColumns, List<IDbDataParameter> parameters)
         {
             var tableInfo = TableInfo.CreateInstance(context, updateValuesType, new List<object>(), OperationType.Read, new BulkConfig());
             return GetSqlSetSegment(context, tableInfo, updateValuesType, updateValues, Activator.CreateInstance(updateValuesType), updateColumns, parameters);
         }
 
-        private static string GetSqlSetSegment(DbContext context, TableInfo tableInfo, Type updateValuesType, object updateValues, object defaultValues, List<string> updateColumns, List<object> parameters)
+        private static string GetSqlSetSegment(DbContext context, TableInfo tableInfo, Type updateValuesType, object updateValues, object defaultValues, List<string> updateColumns, List<IDbDataParameter> parameters)
         {
             string sql = string.Empty;
+            using var dbCommand = context.Database.GetDbConnection().CreateCommand();
             foreach (var propertyNameColumnName in tableInfo.PropertyColumnNamesDict)
             {
                 string propertyName = propertyNameColumnName.Key;
@@ -205,7 +209,7 @@ namespace EFCore.BulkExtensions
                     {
                         sql += $"[{columnName}] = @{columnName}, ";
                         propertyUpdateValue ??= DBNull.Value;
-                        var param = (IDbDataParameter)Activator.CreateInstance(typeof(Microsoft.Data.SqlClient.SqlParameter));
+                        IDbDataParameter param = dbCommand.CreateParameter();
                         param.ParameterName = $"@{columnName}";
                         param.Value = propertyUpdateValue;
                         if (!isDifferentFromDefault && propertyUpdateValue == DBNull.Value && property.PropertyType == typeof(byte[])) // needed only when having complex type property to be updated to default 'null'
@@ -238,6 +242,7 @@ namespace EFCore.BulkExtensions
             var tableAlias = createBodyData.TableAlias;
             var sqlColumns = createBodyData.UpdateColumnsSql;
             var sqlParameters = createBodyData.SqlParameters;
+            using var dbCommand = createBodyData.DbContext.Database.GetDbConnection().CreateCommand();
 
             if (expression is MemberInitExpression memberInitExpression)
             {
@@ -285,7 +290,7 @@ namespace EFCore.BulkExtensions
 
             if (expression is ConstantExpression constantExpression)
             {
-                AddSqlParameter(sqlColumns, sqlParameters, rootTypeTableInfo, columnName, constantExpression.Value);
+                AddSqlParameter(dbCommand, sqlColumns, sqlParameters, rootTypeTableInfo, columnName, constantExpression.Value);
                 return;
             }
 
@@ -370,7 +375,7 @@ namespace EFCore.BulkExtensions
 
             // For any other case fallback on compiling and executing the expression
             var compiledExpressionValue = Expression.Lambda(expression).Compile().DynamicInvoke();
-            AddSqlParameter(sqlColumns, sqlParameters, rootTypeTableInfo, columnName, compiledExpressionValue);
+            AddSqlParameter(dbCommand, sqlColumns, sqlParameters, rootTypeTableInfo, columnName, compiledExpressionValue);
         }
 
         public static DbContext GetDbContext(IQueryable query)
@@ -442,9 +447,10 @@ namespace EFCore.BulkExtensions
             return (leadingCommentsBuilder.ToString(), mainSqlQuery);
         }
 
-        private static void AddSqlParameter(StringBuilder sqlColumns, List<object> sqlParameters, TableInfo tableInfo, string columnName, object value)
+        private static void AddSqlParameter(DbCommand dbCommand, StringBuilder sqlColumns, List<IDbDataParameter> sqlParameters,
+            TableInfo tableInfo, string columnName, object value)
         {
-            var parmName = $"param_{sqlParameters.Count}";
+            var parameterName = $"param_{sqlParameters.Count}";
             if (columnName != null && tableInfo.ConvertibleColumnConverterDict.TryGetValue(columnName, out var valueConverter))
             {
                 value = valueConverter.ConvertToProvider.Invoke(value);
@@ -452,7 +458,9 @@ namespace EFCore.BulkExtensions
             // will rely on SqlClientHelper.CorrectParameterType to fix the type before executing
 
             var columnType = tableInfo.ColumnNamesTypesDict[columnName];
-            var parameter = new Microsoft.Data.SqlClient.SqlParameter(parmName, value ?? DBNull.Value);
+            var parameter = dbCommand.CreateParameter();
+            parameter.ParameterName = parameterName;
+            parameter.Value = value ?? DBNull.Value;
 
             if (value == null && columnType.Contains(DbType.Binary.ToString().ToLower())) //"varbinary(max)".Contains("binary")
             {
@@ -460,7 +468,7 @@ namespace EFCore.BulkExtensions
             }
 
             sqlParameters.Add(parameter);
-            sqlColumns.Append($" @{parmName}");
+            sqlColumns.Append($" @{parameterName}");
         }
 
         private static readonly MethodInfo DbContextSetMethodInfo = 

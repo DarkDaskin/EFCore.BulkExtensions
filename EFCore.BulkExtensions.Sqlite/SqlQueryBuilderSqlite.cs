@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Data.SqlClient;
 
 namespace EFCore.BulkExtensions.Sqlite
 {
@@ -26,7 +25,7 @@ namespace EFCore.BulkExtensions.Sqlite
             List<string> columnsList = tableInfo.PropertyColumnNamesDict.Values.ToList();
             List<string> propertiesList = tableInfo.PropertyColumnNamesDict.Keys.ToList();
 
-            bool keepIdentity = tableInfo.BulkConfig.SqlBulkCopyOptions.HasFlag(SqlBulkCopyOptions.KeepIdentity);
+            bool keepIdentity = tableInfo.BulkConfig.KeepIdentity;
             if (operationType == OperationType.Insert && !keepIdentity && tableInfo.HasIdentity)
             {
                 var identityPropertyName = tableInfo.PropertyColumnNamesDict.SingleOrDefault(a => a.Value == tableInfo.IdentityColumnName).Key;

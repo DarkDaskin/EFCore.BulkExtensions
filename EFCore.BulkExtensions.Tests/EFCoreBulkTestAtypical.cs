@@ -569,7 +569,7 @@ namespace EFCore.BulkExtensions.Tests
 
             var bulkConfigBase = new BulkConfig
             {
-                SqlBulkCopyOptions = Microsoft.Data.SqlClient.SqlBulkCopyOptions.KeepIdentity, // OPTION 1. - to ensure insert order is kept the same since SqlBulkCopy does not guarantee it.
+                KeepIdentity = true, // OPTION 1. - to ensure insert order is kept the same since SqlBulkCopy does not guarantee it.
                 CustomDestinationTableName = nameof(Log),
                 PropertiesToInclude = new List<string>
                     {

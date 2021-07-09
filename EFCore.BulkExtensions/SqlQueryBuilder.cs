@@ -1,5 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -155,7 +154,7 @@ namespace EFCore.BulkExtensions
             List<object> parameters = new List<object>();
             string targetTable = tableInfo.FullTableName;
             string sourceTable = tableInfo.FullTempTableName;
-            bool keepIdentity = tableInfo.BulkConfig.SqlBulkCopyOptions.HasFlag(SqlBulkCopyOptions.KeepIdentity);
+            bool keepIdentity = tableInfo.BulkConfig.KeepIdentity;
             List<string> primaryKeys = tableInfo.PrimaryKeysPropertyColumnNameDict.Where(a => tableInfo.PropertyColumnNamesDict.ContainsKey(a.Key)).Select(a => a.Value).ToList();
             List<string> columnsNames = tableInfo.PropertyColumnNamesDict.Values.ToList();
             List<string> columnsNamesOnCompare = tableInfo.PropertyColumnNamesCompareDict.Values.ToList();

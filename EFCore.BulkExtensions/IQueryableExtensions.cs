@@ -1,11 +1,11 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore.Query;
+﻿using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Reflection;
 
@@ -13,12 +13,12 @@ namespace EFCore.BulkExtensions
 {
     public static class IQueryableExtensions
     {
-        public static (string, IEnumerable<SqlParameter>) ToParametrizedSql(this IQueryable query)
+        public static (string, IEnumerable<DbParameter>) ToParametrizedSql(this IQueryable query)
         {
-            string relationalQueryContextText = "_relationalQueryContext";
-            string relationalCommandCacheText = "_relationalCommandCache";
+            const string relationalQueryContextText = "_relationalQueryContext";
+            const string relationalCommandCacheText = "_relationalCommandCache";
 
-            string cannotGetText = "Cannot get";
+            const string cannotGetText = "Cannot get";
 
             var enumerator = query.Provider.Execute<IEnumerable>(query.Expression).GetEnumerator();
             var queryContext = enumerator.Private<RelationalQueryContext>(relationalQueryContextText) ?? throw new InvalidOperationException($"{cannotGetText} {relationalQueryContextText}");
@@ -37,23 +37,23 @@ namespace EFCore.BulkExtensions
             }
             else
             {
-                string selectExpressionText = "_selectExpression";
-                string querySqlGeneratorFactoryText = "_querySqlGeneratorFactory";
+                const string selectExpressionText = "_selectExpression";
+                const string querySqlGeneratorFactoryText = "_querySqlGeneratorFactory";
                 SelectExpression selectExpression = enumerator.Private<SelectExpression>(selectExpressionText) ?? throw new InvalidOperationException($"{cannotGetText} {selectExpressionText}");
                 IQuerySqlGeneratorFactory factory = enumerator.Private<IQuerySqlGeneratorFactory>(querySqlGeneratorFactoryText) ?? throw new InvalidOperationException($"{cannotGetText} {querySqlGeneratorFactoryText}");
                 command = factory.Create().GetCommand(selectExpression);
             }
             string sql = command.CommandText;
 
-            IList<SqlParameter> parameters;
-            using (var dbCommand = new SqlCommand()) // Use a DbCommand to convert parameter values using ValueConverters to the correct type.
+            IEnumerable<DbParameter> parameters;
+            using (var dbCommand = queryContext.Connection.DbConnection.CreateCommand()) // Use a DbCommand to convert parameter values using ValueConverters to the correct type.
             {
                 foreach (var param in command.Parameters)
                 {
                     var values = parameterValues[param.InvariantName];
                     param.AddDbParameter(dbCommand, values);
                 }
-                parameters = new List<SqlParameter>(dbCommand.Parameters.OfType<SqlParameter>());
+                parameters = dbCommand.Parameters.Cast<DbParameter>().ToList();
                 dbCommand.Parameters.Clear();
             }
             return (sql, parameters);

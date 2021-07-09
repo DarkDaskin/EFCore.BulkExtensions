@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
@@ -55,7 +56,7 @@ namespace EFCore.BulkExtensions
             return await context.Database.ExecuteSqlRawAsync(sql, sqlParameters, cancellationToken).ConfigureAwait(false);
         }
 
-        private static (DbContext, string, List<object>) GetBatchUpdateArguments<T>(IQueryable<T> query, object updateValues = null, List<string> updateColumns = null, Expression<Func<T, T>> updateExpression = null, Type type = null) where T : class
+        private static (DbContext, string, List<IDbDataParameter>) GetBatchUpdateArguments<T>(IQueryable<T> query, object updateValues = null, List<string> updateColumns = null, Expression<Func<T, T>> updateExpression = null, Type type = null) where T : class
         {
             type ??= typeof(T);
             var context = BatchUtil.GetDbContext(query);

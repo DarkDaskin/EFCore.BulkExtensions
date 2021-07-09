@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -17,7 +18,7 @@ namespace EFCore.BulkExtensions
         public BatchUpdateCreateBodyData(
             string baseSql,
             DbContext dbContext,
-            IEnumerable<object> innerParameters,
+            IEnumerable<IDbDataParameter> innerParameters,
             IQueryable query,
             Type rootType,
             string tableAlias,
@@ -40,7 +41,7 @@ namespace EFCore.BulkExtensions
             var tableInfo = TableInfo.CreateInstance(dbContext, rootType, Array.Empty<object>(), OperationType.Read, _tableInfoBulkConfig);
             _tableInfoLookup.Add(rootType, tableInfo);
 
-            SqlParameters = new List<object>(innerParameters);
+            SqlParameters = innerParameters.ToList();
 
             foreach (Match match in BatchUtil.TableAliasPattern.Matches(baseSql))
             {
@@ -49,12 +50,13 @@ namespace EFCore.BulkExtensions
         }
 
         public string BaseSql { get; }
+        [Obsolete]
         public DbServer DatabaseType { get; }
         public DbContext DbContext { get; }
         public IQueryable Query { get; }
         public string RootInstanceParameterName { get; }
         public Type RootType { get; }
-        public List<object> SqlParameters { get; }
+        public List<IDbDataParameter> SqlParameters { get; }
         public string TableAlias { get; }
         public List<string> TableAliasesInUse { get; }
         public StringBuilder UpdateColumnsSql { get; }

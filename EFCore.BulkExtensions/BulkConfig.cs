@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace EFCore.BulkExtensions
@@ -208,12 +209,10 @@ namespace EFCore.BulkExtensions
         public bool DateTime2PrecisionForceRound { get; set; }
 
         /// <summary>
-        ///     Enum with [Flags] attribute which enables specifying one or more options.
+        /// Preserve source identity values. When not specified, identity values are assigned by the destination.
         /// </summary>
-        /// <value>
-        ///     <c>Default, KeepIdentity, CheckConstraints, TableLock, KeepNulls, FireTriggers, UseInternalTransaction</c>
-        /// </value>
-        public Microsoft.Data.SqlClient.SqlBulkCopyOptions SqlBulkCopyOptions { get; set; } // is superset of System.Data.SqlClient.SqlBulkCopyOptions, gets converted to the desired type
+        // TODO: ensure mssql-specific flag is honored when appropriate
+        public bool KeepIdentity { get; set; }
 
         /// <summary>
         ///     A filter on entities to delete when using BulkInsertOrUpdateOrDelete.
@@ -230,6 +229,30 @@ namespace EFCore.BulkExtensions
         public OperationType OperationType { get; set; }
 
         internal object SynchronizeFilter { get; private set; }
+
+        /// <summary>
+        /// A collection of provider-specific option extensions.
+        /// </summary>
+        /// <remarks>
+        /// Each extension type may only be added once.
+        /// </remarks>
+        public ICollection<IBulkConfigProviderOptions> ProviderOptions { get; } = new List<IBulkConfigProviderOptions>();
+
+        /// <summary>
+        /// Gets or creates an instance of provider-specific option extension to this instance.
+        /// </summary>
+        /// <typeparam name="TOptions">The type of provider-specific option extension.</typeparam>
+        /// <returns>An instance of <see cref="TOptions"/>.</returns>
+        public TOptions GetProviderOptions<TOptions>() where TOptions : IBulkConfigProviderOptions, new()
+        {
+            lock (ProviderOptions)
+            {
+                var options = ProviderOptions.OfType<TOptions>().SingleOrDefault();
+                if (options == null)
+                    ProviderOptions.Add(options = new TOptions());
+                return options;
+            }
+        }
     }
 
     public class StatsInfo
@@ -246,5 +269,15 @@ namespace EFCore.BulkExtensions
         public int NumberOfSkippedForUpdate { get; set; }
 
         public List<object> EntitiesOutput { get; set; }
+    }
+
+    /// <summary>
+    /// Marker interface for provider-specific extensions to <see cref="BulkConfig"/>.
+    /// </summary>
+    /// <remarks>
+    /// Implementations must provide a public parameterless constructor.
+    /// </remarks>
+    public interface IBulkConfigProviderOptions
+    {
     }
 }

@@ -458,35 +458,6 @@ namespace EFCore.BulkExtensions
                 }
             }
         }
-
-        /// <summary>
-        /// Supports <see cref="Microsoft.Data.SqlClient.SqlBulkCopy"/>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="sqlBulkCopy"></param>
-        /// <param name="entities"></param>
-        /// <param name="setColumnMapping"></param>
-        /// <param name="progress"></param>
-        public void SetSqlBulkCopyConfig<T>(Microsoft.Data.SqlClient.SqlBulkCopy sqlBulkCopy, IList<T> entities, bool setColumnMapping, Action<decimal> progress)
-        {
-            sqlBulkCopy.DestinationTableName = InsertToTempTable ? FullTempTableName : FullTableName;
-            sqlBulkCopy.BatchSize = BulkConfig.BatchSize;
-            sqlBulkCopy.NotifyAfter = BulkConfig.NotifyAfter ?? BulkConfig.BatchSize;
-            sqlBulkCopy.SqlRowsCopied += (sender, e) =>
-            {
-                progress?.Invoke(ProgressHelper.GetProgress(entities.Count, e.RowsCopied)); // round to 4 decimal places
-            };
-            sqlBulkCopy.BulkCopyTimeout = BulkConfig.BulkCopyTimeout ?? sqlBulkCopy.BulkCopyTimeout;
-            sqlBulkCopy.EnableStreaming = BulkConfig.EnableStreaming;
-
-            if (setColumnMapping)
-            {
-                foreach (var element in PropertyColumnNamesDict)
-                {
-                    sqlBulkCopy.ColumnMappings.Add(element.Key, element.Value);
-                }
-            }
-        }
         #endregion
 
         #region SqlCommands
@@ -551,7 +522,7 @@ namespace EFCore.BulkExtensions
 
         protected async Task<int> GetNumberUpdatedAsync(DbContext context, CancellationToken cancellationToken, bool isAsync)
         {
-            var resultParameter = (IDbDataParameter)Activator.CreateInstance(typeof(Microsoft.Data.SqlClient.SqlParameter));
+            var resultParameter = CreateParameter(context);
             resultParameter.ParameterName = "@result";
             resultParameter.DbType = DbType.Int32;
             resultParameter.Direction = ParameterDirection.Output;
@@ -571,7 +542,7 @@ namespace EFCore.BulkExtensions
 
         protected async Task<int> GetNumberDeletedAsync(DbContext context, CancellationToken cancellationToken, bool isAsync)
         {
-            var resultParameter = (IDbDataParameter)Activator.CreateInstance(typeof(Microsoft.Data.SqlClient.SqlParameter));
+            var resultParameter = CreateParameter(context);
             resultParameter.ParameterName = "@result";
             resultParameter.DbType = DbType.Int32;
             resultParameter.Direction = ParameterDirection.Output;
@@ -587,6 +558,12 @@ namespace EFCore.BulkExtensions
                 context.Database.ExecuteSqlRaw(sqlSetResult, resultParameter);
             }
             return (int)resultParameter.Value;
+        }
+
+        private static IDbDataParameter CreateParameter(DbContext context)
+        {
+            using var dbCommand = context.Database.GetDbConnection().CreateCommand();
+            return dbCommand.CreateParameter();
         }
 
         #endregion
