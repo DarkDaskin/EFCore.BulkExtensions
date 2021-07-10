@@ -6,9 +6,9 @@ namespace EFCore.BulkExtensions.SqlAdapters
     internal static class DbContextAdapterExtensions
     {
         public static ISqlOperationsAdapter GetSqlOperationsAdapter(this DbContext context) =>
-            context.GetService<SqlAdapterFactory>().GetSqlOperationsAdapter(context);
+            context.GetService<ISqlOperationsAdapter>();
 
         public static IQueryBuilderSpecialization GetQueryBuilderSpecialization(this DbContext context) =>
-            context.GetService<SqlAdapterFactory>().GetQueryBuilderSpecialization(context);
+            context.GetService<IQueryBuilderSpecialization>();
     }
 }
